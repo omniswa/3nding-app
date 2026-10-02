@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'reader.dart';
 import 'store.dart';
 
-const bg = Color(0xFFF7F2EA),
-    brown = Color(0xFFB87A4B),
-    green = Color(0xFF5A6B4F),
-    ink = Color(0xFF2B2A28);
+// Palette: cool mist background, deep ink text, indigo primary, peach for progress.
+const bg = Color(0xFFF2F4F8),
+    ink = Color(0xFF14182B),
+    muted = Color(0xFF6B7186),
+    primary = Color(0xFF4B4FE0),
+    tint = Color(0xFFE4E5FB),
+    peach = Color(0xFFFF9E73);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +26,8 @@ class App extends StatelessWidget {
     theme: ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: bg,
-      colorScheme: ColorScheme.fromSeed(seedColor: green, surface: bg),
+      colorScheme: ColorScheme.fromSeed(seedColor: primary, surface: bg),
+      textTheme: Typography.blackCupertino,
     ),
     home: const Shell(),
   );
@@ -43,31 +47,35 @@ class _ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
+      bottom: false,
       child: IndexedStack(
         index: tab,
         children: const [HomeScreen(), FavoritesScreen(), StatsScreen()],
       ),
     ),
     bottomNavigationBar: NavigationBar(
+      height: 68,
       backgroundColor: Colors.white,
-      indicatorColor: brown.withValues(alpha: .18),
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: tint,
+      labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
       selectedIndex: tab,
       onDestinationSelected: (i) => setState(() => tab = i),
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
+          icon: Icon(Icons.explore_outlined),
+          selectedIcon: Icon(Icons.explore, color: primary),
+          label: 'Discover',
         ),
         NavigationDestination(
-          icon: Icon(Icons.star_border),
-          selectedIcon: Icon(Icons.star),
-          label: 'Favorites',
+          icon: Icon(Icons.favorite_border),
+          selectedIcon: Icon(Icons.favorite, color: primary),
+          label: 'Saved',
         ),
         NavigationDestination(
-          icon: Icon(Icons.bar_chart_outlined),
-          selectedIcon: Icon(Icons.bar_chart),
-          label: 'Stats',
+          icon: Icon(Icons.insights_outlined),
+          selectedIcon: Icon(Icons.insights, color: primary),
+          label: 'Progress',
         ),
       ],
     ),
@@ -77,75 +85,100 @@ class _ShellState extends State<Shell> {
 // ---------- shared widgets ----------
 class Cover extends StatelessWidget {
   final Book b;
-  final double w;
-  const Cover(this.b, this.w, {super.key});
+  final double? w;
+  const Cover(this.b, [this.w, Key? key]) : super(key: key);
+
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(12),
-    child: SizedBox(
-      width: w,
-      height: w * 4 / 3,
-      child: Image.network(
-        b.cover,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          color: green,
-          padding: const EdgeInsets.all(8),
-          alignment: Alignment.bottomLeft,
-          child: Text(
-            b.title.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              letterSpacing: 1,
+  Widget build(BuildContext context) {
+    final img = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: ink.withValues(alpha: .18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.network(
+          b.cover,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, p) =>
+              p == null ? child : Container(color: tint),
+          errorBuilder: (_, _, _) => Container(
+            color: primary,
+            padding: const EdgeInsets.all(10),
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              b.title,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+    return w == null
+        ? AspectRatio(aspectRatio: 3 / 4, child: img)
+        : SizedBox(width: w, height: w! * 4 / 3, child: img);
+  }
 }
 
-Widget heading(String t, {Widget? trailing}) => Padding(
-  padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+Widget heading(String t, {String? sub, Widget? trailing}) => Padding(
+  padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
   child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.end,
     children: [
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            t,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: ink,
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.5,
+              ),
             ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            width: 40,
-            height: 3,
-            color: brown,
-          ),
-        ],
+            if (sub != null)
+              Text(sub, style: const TextStyle(color: muted, fontSize: 13)),
+          ],
+        ),
       ),
       ?trailing,
     ],
   ),
 );
 
-BoxDecoration card() => BoxDecoration(
-  color: Colors.white.withValues(alpha: .75),
-  borderRadius: BorderRadius.circular(20),
+BoxDecoration card({double r = 24}) => BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(r),
   boxShadow: [
     BoxShadow(
-      color: Colors.black.withValues(alpha: .04),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
+      color: ink.withValues(alpha: .05),
+      blurRadius: 20,
+      offset: const Offset(0, 8),
     ),
   ],
+);
+
+Widget bar(double v, {double h = 6, Color color = peach}) => ClipRRect(
+  borderRadius: BorderRadius.circular(h),
+  child: LinearProgressIndicator(
+    value: v,
+    minHeight: h,
+    color: color,
+    backgroundColor: color.withValues(alpha: .2),
+  ),
 );
 
 // ---------- HOME ----------
@@ -158,7 +191,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String q = '';
   String? author;
-  bool searching = false;
+
+  String get _greeting {
+    final h = DateTime.now().hour;
+    return h < 12
+        ? 'Good morning'
+        : h < 18
+        ? 'Good afternoon'
+        : 'Good evening';
+  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -181,177 +222,231 @@ class _HomeScreenState extends State<HomeScreen> {
                     )),
           )
           .toList();
+      final authors = store.books.map((b) => b.author).toSet().toList()..sort();
+      final browsing = q.isEmpty && author == null;
+
       return RefreshIndicator(
         onRefresh: store.refresh,
-        child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_stories, color: brown, size: 34),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '3NDING',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: ink,
-                          ),
-                        ),
-                        Text(
-                          'READ MORE · DISCOVER MORE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            letterSpacing: 2,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _greeting,
+                      style: const TextStyle(color: muted, fontSize: 15),
                     ),
-                  ),
-                  IconButton.filledTonal(
-                    onPressed: () => setState(() {
-                      searching = !searching;
-                      if (!searching) q = '';
-                    }),
-                    icon: Icon(searching ? Icons.close : Icons.search),
-                  ),
-                  SizedBox(width: 10),
-                  IconButton.filledTonal(
-                    onPressed: _filter,
-                    icon: Badge(
-                      isLabelVisible: author != null,
-                      child: const Icon(Icons.tune),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'What will you\nread today?',
+                      style: TextStyle(
+                        fontSize: 34,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    TextField(
+                      onChanged: (v) => setState(() => q = v),
+                      decoration: InputDecoration(
+                        hintText: 'Search titles or authors',
+                        hintStyle: const TextStyle(color: muted),
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: const Icon(Icons.search, color: muted),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (searching)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: TextField(
-                  autofocus: true,
-                  onChanged: (v) => setState(() => q = v),
-                  decoration: InputDecoration(
-                    hintText: 'Search title or author',
-                    filled: true,
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 58,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: authors.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final a = i == 0 ? null : authors[i - 1];
+                    return ChoiceChip(
+                      label: Text(a ?? 'All books'),
+                      selected: author == a,
+                      showCheckmark: false,
+                      selectedColor: primary,
+                      backgroundColor: Colors.white,
+                      side: BorderSide.none,
+                      labelStyle: TextStyle(
+                        color: author == a ? Colors.white : ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => setState(() => author = a),
+                    );
+                  },
+                ),
+              ),
+            ),
+            if (recent.isNotEmpty && browsing) ...[
+              SliverToBoxAdapter(child: heading('Continue reading')),
+              SliverToBoxAdapter(child: _hero(recent.first)),
+              if (recent.length > 1) ...[
+                SliverToBoxAdapter(child: heading('Pick up again')),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 210,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recent.length - 1,
+                      separatorBuilder: (_, _) => const SizedBox(width: 14),
+                      itemBuilder: (_, i) => _recentTile(recent[i + 1]),
                     ),
                   ),
                 ),
-              ),
-            if (recent.isNotEmpty) ...[
-              heading('Recently Read'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.05,
-                  children: [for (final b in recent.take(4)) _recentCard(b)],
-                ),
-              ),
+              ],
             ],
-            heading(
-              'Library',
-              trailing: author != null
-                  ? InputChip(
-                      label: Text(author!),
-                      onDeleted: () => setState(() => author = null),
-                    )
-                  : null,
+            SliverToBoxAdapter(
+              child: heading(
+                browsing ? 'Library' : 'Results',
+                sub: '${lib.length} ${lib.length == 1 ? 'book' : 'books'}',
+              ),
             ),
             if (store.loading)
-              const Padding(
-                padding: EdgeInsets.all(40),
-                child: Center(child: CircularProgressIndicator()),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
               ),
             if (store.error != null)
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(store.error!, textAlign: TextAlign.center),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(store.error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      FilledButton.tonal(
+                        onPressed: store.refresh,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             if (!store.loading && store.error == null && lib.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(40),
-                child: Center(child: Text('No books match your filters.')),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(
+                    child: Text('Nothing found. Try a different search.'),
+                  ),
+                ),
               ),
-            for (final b in lib) _libraryCard(b),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+              sliver: SliverGrid.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 22,
+                  crossAxisSpacing: 18,
+                  childAspectRatio: .56,
+                ),
+                itemCount: lib.length,
+                itemBuilder: (_, i) => _gridItem(lib[i]),
+              ),
+            ),
           ],
         ),
       );
     },
   );
 
-  Widget _recentCard(Book b) {
+  Widget _hero(Book b) {
     final p = store.progress[b.id]!, pct = (p['p'] as num).toDouble();
     return GestureDetector(
       onTap: () => openBook(context, b),
       child: Container(
-        decoration: card(),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: const LinearGradient(
+            colors: [primary, Color(0xFF2C2FA8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: primary.withValues(alpha: .35),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Cover(b, 58),
-            const SizedBox(width: 10),
+            Cover(b, 92),
+            const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    b.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+              child: SizedBox(
+                height: 92 * 4 / 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      b.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  Text(
-                    b.author,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.black54, fontSize: 11),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${(pct * 100).round()}% · Ch. ${p['ch'] + 1}',
-                    style: const TextStyle(fontSize: 11, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: pct,
-                      minHeight: 5,
-                      color: brown,
-                      backgroundColor: brown.withValues(alpha: .15),
+                    const SizedBox(height: 4),
+                    Text(
+                      b.author,
+                      style: const TextStyle(color: Colors.white70),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Continue →',
-                    style: TextStyle(
-                      color: brown,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                    const Spacer(),
+                    Text(
+                      '${(pct * 100).round()}% read · Chapter ${p['ch'] + 1}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    bar(pct, h: 6, color: peach),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: primary,
+                          minimumSize: const Size(0, 42),
+                        ),
+                        onPressed: () => openBook(context, b),
+                        child: const Text('Resume'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -360,130 +455,88 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _libraryCard(Book b) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-    padding: const EdgeInsets.all(14),
-    decoration: card(),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Cover(b, 92),
-        const SizedBox(width: 14),
-        Expanded(
-          child: SizedBox(
-            height: 92 * 4 / 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            b.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            b.author,
-                            style: const TextStyle(color: Colors.black54),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Added: ${b.added}',
-                            style: const TextStyle(
-                              color: Colors.black45,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      onPressed: () => store.toggleFav(b),
-                      icon: Icon(
-                        store.isFav(b) ? Icons.star : Icons.star_border,
-                        color: brown,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: green,
-                      minimumSize: const Size(0, 46),
-                    ),
-                    onPressed: () => openBook(context, b),
-                    label: Text(
-                      store.progress.containsKey(b.id)
-                          ? 'Continue'
-                          : 'Read Book',
-                    ),
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    iconAlignment: IconAlignment.end,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  void _filter() {
-    final authors = store.books.map((b) => b.author).toSet().toList()..sort();
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+  Widget _recentTile(Book b) {
+    final pct = (store.progress[b.id]!['p'] as num).toDouble();
+    return GestureDetector(
+      onTap: () => openBook(context, b),
+      child: SizedBox(
+        width: 110,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Filter by author',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                ChoiceChip(
-                  label: const Text('All'),
-                  selected: author == null,
-                  onSelected: (_) {
-                    setState(() => author = null);
-                    Navigator.pop(context);
-                  },
-                ),
-                for (final a in authors)
-                  ChoiceChip(
-                    label: Text(a),
-                    selected: author == a,
-                    onSelected: (_) {
-                      setState(() => author = a);
-                      Navigator.pop(context);
-                    },
-                  ),
-              ],
+            Cover(b, 110),
+            const SizedBox(height: 10),
+            bar(pct, h: 4),
+            const SizedBox(height: 6),
+            Text(
+              b.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _gridItem(Book b) {
+    final started = store.progress.containsKey(b.id);
+    return GestureDetector(
+      onTap: () => openBook(context, b),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              Cover(b),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => store.toggleFav(b),
+                  child: CircleAvatar(
+                    radius: 17,
+                    backgroundColor: Colors.white.withValues(alpha: .92),
+                    child: Icon(
+                      store.isFav(b) ? Icons.favorite : Icons.favorite_border,
+                      size: 19,
+                      color: store.isFav(b) ? Colors.redAccent : ink,
+                    ),
+                  ),
+                ),
+              ),
+              if (started)
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: bar(
+                    (store.progress[b.id]!['p'] as num).toDouble(),
+                    h: 5,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            b.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            b.author,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: muted, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
@@ -518,15 +571,17 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         },
       );
       return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
         children: [
           heading(
-            'My Favorites',
+            'Saved',
+            sub: '${list.length} ${list.length == 1 ? 'book' : 'books'}',
             trailing: PopupMenuButton<Sort>(
-              icon: const Icon(Icons.sort),
+              icon: const Icon(Icons.swap_vert),
               initialValue: sort,
               onSelected: (s) => setState(() => sort = s),
               itemBuilder: (_) => const [
-                PopupMenuItem(value: Sort.added, child: Text('Date added')),
+                PopupMenuItem(value: Sort.added, child: Text('Recently saved')),
                 PopupMenuItem(value: Sort.title, child: Text('Title')),
                 PopupMenuItem(value: Sort.author, child: Text('Author')),
                 PopupMenuItem(value: Sort.opened, child: Text('Last opened')),
@@ -534,15 +589,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
           ),
           if (list.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(48),
+            Padding(
+              padding: const EdgeInsets.all(48),
               child: Column(
                 children: [
-                  Icon(Icons.star_border, size: 56, color: brown),
-                  SizedBox(height: 12),
-                  Text(
-                    'No favorites yet.\nTap the star on any book to save it here.',
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: tint,
+                    child: const Icon(
+                      Icons.favorite_border,
+                      size: 32,
+                      color: primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Nothing saved yet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Tap the heart on any book to keep it here.',
                     textAlign: TextAlign.center,
+                    style: TextStyle(color: muted),
                   ),
                 ],
               ),
@@ -559,12 +628,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return GestureDetector(
       onTap: () => openBook(context, b),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
         padding: const EdgeInsets.all(12),
         decoration: card(),
         child: Row(
           children: [
-            Cover(b, 64),
+            Cover(b, 66),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -579,24 +648,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  Text(b.author, style: const TextStyle(color: Colors.black54)),
-                  const SizedBox(height: 8),
+                  Text(b.author, style: const TextStyle(color: muted)),
+                  const SizedBox(height: 10),
                   if (done)
-                    const Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: Icon(Icons.check_circle, color: green, size: 18),
-                      label: Text('Finished'),
+                    const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: primary, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'Finished',
+                          style: TextStyle(
+                            color: primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     )
                   else
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 6,
-                        color: brown,
-                        backgroundColor: brown.withValues(alpha: .15),
-                      ),
-                    ),
+                    bar(pct),
                 ],
               ),
             ),
@@ -608,10 +677,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   value: 'done',
                   child: Text(done ? 'Mark as unfinished' : 'Mark as finished'),
                 ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Text('Remove from favorites'),
-                ),
+                const PopupMenuItem(value: 'remove', child: Text('Remove')),
               ],
             ),
           ],
@@ -621,48 +687,42 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 }
 
-// ---------- STATS (placeholder + suggested features) ----------
+// ---------- PROGRESS ----------
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
     builder: (context, _) {
+      final started = store.progress.length, done = store.finished.length;
       Widget tile(String n, String l, IconData i) => Expanded(
         child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: card(),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: card(r: 20),
           child: Column(
             children: [
-              Icon(i, color: brown),
+              Icon(i, color: primary),
               const SizedBox(height: 8),
               Text(
                 n,
                 style: const TextStyle(
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              Text(
-                l,
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
-              ),
+              Text(l, style: const TextStyle(color: muted, fontSize: 12)),
             ],
           ),
         ),
       );
       const ideas = [
         (
-          Icons.local_fire_department,
+          Icons.local_fire_department_outlined,
           'Reading streak',
           'Days in a row you opened a book',
         ),
         (Icons.timer_outlined, 'Time read', 'Daily and weekly reading minutes'),
-        (
-          Icons.flag_outlined,
-          'Goals',
-          'Set a yearly book or daily minutes target',
-        ),
+        (Icons.flag_outlined, 'Goals', 'Set a yearly book or daily target'),
         (
           Icons.emoji_events_outlined,
           'Badges',
@@ -670,31 +730,80 @@ class StatsScreen extends StatelessWidget {
         ),
       ];
       return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
         children: [
-          heading('Stats'),
+          heading('Progress'),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(22),
+            decoration: card(r: 28),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 110,
+                  height: 110,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox.expand(
+                        child: CircularProgressIndicator(
+                          value: started == 0 ? 0 : done / started,
+                          strokeWidth: 10,
+                          strokeCap: StrokeCap.round,
+                          color: primary,
+                          backgroundColor: tint,
+                        ),
+                      ),
+                      Text(
+                        '$done/$started',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 22),
+                Expanded(
+                  child: Text(
+                    started == 0
+                        ? 'Open a book to start tracking your progress.'
+                        : done == started
+                        ? 'You finished everything you started. Pick a new one!'
+                        : '${started - done} in progress. Keep going!',
+                    style: const TextStyle(fontSize: 16, height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               spacing: 10,
               children: [
-                tile('${store.progress.length}', 'Started', Icons.auto_stories),
-                tile(
-                  '${store.finished.length}',
-                  'Finished',
-                  Icons.check_circle_outline,
-                ),
-                tile('${store.favs.length}', 'Favorites', Icons.star_outline),
+                tile('$started', 'Started', Icons.auto_stories),
+                tile('$done', 'Finished', Icons.check_circle_outline),
+                tile('${store.favs.length}', 'Saved', Icons.favorite_border),
               ],
             ),
           ),
           heading('Coming soon'),
           for (final e in ideas)
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              decoration: card(),
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+              decoration: card(r: 20),
               child: ListTile(
-                leading: Icon(e.$1, color: brown),
-                title: Text(e.$2),
+                leading: CircleAvatar(
+                  backgroundColor: tint,
+                  child: Icon(e.$1, color: primary),
+                ),
+                title: Text(
+                  e.$2,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 subtitle: Text(e.$3),
               ),
             ),
